@@ -98,58 +98,30 @@ def load_questions():
 questions = load_questions()
 
 # =========================================================
-# INIT STATE (SAFE)
+# MODE SWITCHER (🔥 新增：统一的模式切换器，负责读取进度)
 # =========================================================
-if "mode" not in st.session_state:
-    st.session_state.mode = "bank"   # ⭐ 默认 Bank
+def switch_mode(target_mode):
+    """切换模式并安全加载该模式的进度"""
+    st.session_state.mode = target_mode
+    
+    # 核心：根据不同模式获取当前题库长度，防止历史 index 超出新题库的范围
+    if target_mode == "bank":
+        max_len = len(questions)
+    elif target_mode == "wrong":
+        max_len = len(st.session_state.wrong_questions)
+    else: # exam
+        max_len = len(st.session_state.quiz)
 
-if "wrong_questions" not in st.session_state:
-    st.session_state.wrong_questions = load_wrong()
-
-if "quiz" not in st.session_state:
-    st.session_state.quiz = []
-
-if "index" not in st.session_state:
-    st.session_state.index = 0
-
-if "submitted" not in st.session_state:
-    st.session_state.submitted = False
-
-if "selected" not in st.session_state:
-    st.session_state.selected = None
-
-if "feedback" not in st.session_state:
-    st.session_state.feedback = None
-
-if "score" not in st.session_state:
-    st.session_state.score = 0
-
-# =========================================================
-# MODE STARTERS
-# =========================================================
-def start_exam():
-    st.session_state.quiz = random.sample(questions, min(40, len(questions)))
-    st.session_state.index = 0
-    st.session_state.score = 0
-
+    # 从数据库读取进度
+    saved_index = load_progress(f"{target_mode}_index", default=0)
+    
+    # 如果读取的进度越界了，重置为 0
+    if saved_index >= max_len or max_len == 0:
+        st.session_state.index = 0
+    else:
+        st.session_state.index = saved_index
+        
     reset_state()
-    st.session_state.mode = "exam"
-    st.rerun()
-
-def start_wrong():
-    wrong = st.session_state.wrong_questions
-
-    if not wrong:
-        st.warning("No wrong questions 🎉")
-        return
-
-    st.session_state.quiz = random.sample(wrong, len(wrong))
-    st.session_state.index = 0
-    st.session_state.score = 0
-
-    reset_state()
-    st.session_state.mode = "wrong"
-    st.rerun()
 
 def reset_state():
     st.session_state.submitted = False
@@ -157,18 +129,64 @@ def reset_state():
     st.session_state.feedback = None
 
 # =========================================================
+# INIT STATE (🔥 优化：首次进入时从数据库加载历史 Mode 和 Index)
+# =========================================================
+if "mode" not in st.session_state:
+    # 首次启动，恢复上一次的 Mode，默认是 bank
+    saved_mode = load_progress("current_mode", default="bank")
+    st.session_state.wrong_questions = load_wrong()
+    
+    # 初始化其余状态
+    st.session_state.quiz = []
+    st.session_state.score = 0
+    reset_state()
+    
+    # 触发一次模式切换以正确读取该模式的 index
+    switch_mode(saved_mode)
+
+if "wrong_questions" not in st.session_state:
+    st.session_state.wrong_questions = load_wrong()
+
+# =========================================================
+# MODE STARTERS
+# =========================================================
+def start_exam():
+    st.session_state.quiz = random.sample(questions, min(40, len(questions)))
+    st.session_state.score = 0
+    # 考试模式属于全新生成，直接重置进度为 0 并保存
+    save_progress("exam_index", 0)
+    switch_mode("exam")
+    st.rerun()
+
+def start_wrong():
+    wrong = st.session_state.wrong_questions
+    if not wrong:
+        st.warning("No wrong questions 🎉")
+        return
+    
+    # 错题模式我们通常也随机，如果你想记住错题模式的进度，可以用 switch_mode
+    st.session_state.quiz = random.sample(wrong, len(wrong))
+    st.session_state.score = 0
+    switch_mode("wrong")
+    st.rerun()
+
+# =========================================================
 # SIDEBAR
 # =========================================================
 st.sidebar.title("🎓 Navigation")
 
 if st.sidebar.button("📚 Bank Mode"):
-    st.session_state.mode = "bank"
+    # 记住当前模式
+    save_progress("current_mode", "bank")
+    switch_mode("bank")
     st.rerun()
 
 if st.sidebar.button("📝 Exam Mode"):
+    save_progress("current_mode", "exam")
     start_exam()
 
 if st.sidebar.button("❌ Wrong Mode"):
+    save_progress("current_mode", "wrong")
     start_wrong()
 
 st.sidebar.divider()
@@ -176,6 +194,10 @@ st.sidebar.divider()
 if st.sidebar.button("🧹 Clear Wrong Questions"):
     st.session_state.wrong_questions = []
     clear_wrong()
+    # 错题清空后，如果还在错题模式，强行切回 bank
+    if st.session_state.mode == "wrong":
+        save_progress("current_mode", "bank")
+        switch_mode("bank")
     st.rerun()
 
 st.sidebar.write(f"Wrong Questions: {len(st.session_state.wrong_questions)}")
@@ -194,6 +216,10 @@ source = get_source()
 if len(source) == 0:
     st.warning("No questions available")
     st.stop()
+
+# 兜底保护：确保 index 绝不越界
+if st.session_state.index >= len(source):
+    st.session_state.index = 0
 
 q = source[st.session_state.index]
 
@@ -218,16 +244,13 @@ st.write(q["question"])
 # OPTIONS
 # =========================================================
 if not st.session_state.submitted:
-
     choice = st.radio(
         "Choose answer",
         list(q["options"].keys()),
         format_func=lambda x: f"{x}. {q['options'][x]}",
         key=f"{st.session_state.mode}_{q['id']}"
     )
-
     st.session_state.selected = choice
-
 else:
     choice = st.session_state.selected
 
@@ -235,11 +258,8 @@ else:
 # SUBMIT (UNIFIED LOGIC)
 # =========================================================
 if not st.session_state.submitted:
-
     if st.button("Submit"):
-
         st.session_state.submitted = True
-
         correct = q["answer"]
         user_choice = choice
 
@@ -249,21 +269,16 @@ if not st.session_state.submitted:
                 st.session_state.score += 1
         else:
             st.session_state.feedback = ("error", user_choice, correct)
-
-            # save wrong
             if q not in st.session_state.wrong_questions:
                 st.session_state.wrong_questions.append(q)
                 save_wrong(q)
-
         st.rerun()
 
 # =========================================================
 # FEEDBACK UI
 # =========================================================
 if st.session_state.feedback:
-
     status, user_choice, correct = st.session_state.feedback
-
     if status == "success":
         st.success("🎯 Correct!")
     else:
@@ -284,16 +299,13 @@ if st.session_state.feedback:
 # NEXT BUTTON (UNIFIED)
 # =========================================================
 if st.session_state.submitted:
-
     if st.button("Next"):
-
         st.session_state.index += 1
-
-        save_progress(f"{st.session_state.mode}_index", st.session_state.index)
-
-        reset_state()
 
         if st.session_state.index >= len(source):
             st.session_state.index = 0
 
+        # ⭐ 核心修复：点击 Next 时，立刻写入数据库
+        save_progress(f"{st.session_state.mode}_index", st.session_state.index)
+        reset_state()
         st.rerun()
