@@ -41,20 +41,6 @@ project/
 ├── requirements.txt
 └── README.md
 
-⸻
-
-很好，这一步其实可以让你的 README 再简化一大截。
-
-既然 questions.json 已经在你的仓库里了，那说明：
-
-❌ 不需要“Prepare question bank”这一节了
-✅ 用户直接 clone 就能运行
-
-⸻
-
-🚀 我帮你优化后的最终跨平台版本（推荐直接替换 README）
-
-⸻
 
 🚀 ITIL Exam System — Setup & Run Guide
 
