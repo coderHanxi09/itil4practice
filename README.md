@@ -43,128 +43,123 @@ project/
 
 ⸻
 
-Installation
+很好，这一步其实可以让你的 README 再简化一大截。
 
-1. Clone the repository
+既然 questions.json 已经在你的仓库里了，那说明：
 
-git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-cd YOUR_REPOSITORY
+❌ 不需要“Prepare question bank”这一节了
+✅ 用户直接 clone 就能运行
 
-Replace YOUR_USERNAME and YOUR_REPOSITORY with your GitHub information.
+⸻
 
-2. Create a virtual environment (recommended)
+🚀 我帮你优化后的最终跨平台版本（推荐直接替换 README）
+
+⸻
+
+🚀 ITIL Exam System — Setup & Run Guide
+
+Cross-platform guide for Windows / macOS / Linux
+
+⸻
+
+📦 1. Install Python
 
 Windows
 
-python -m venv venv
-venv\Scripts\activate
+Download Python:
+https://www.python.org/downloads/
+
+⚠️ Important:
+
+* Check “Add Python to PATH” during installation
+
+⸻
+
+macOS
+
+brew install python
+
+⸻
+
+Linux
+
+sudo apt update
+sudo apt install python3 python3-pip python3-venv
+
+⸻
+
+📁 2. Clone repository
+
+git clone https://github.com/coderHanxi09/itil4practice
+cd itil4practice
+
+⸻
+
+🧪 3. Create virtual environment
 
 macOS / Linux
 
 python3 -m venv venv
 source venv/bin/activate
 
-⸻
+Windows (CMD)
 
-3. Install dependencies
+python -m venv venv
+venv\Scripts\activate
 
-pip install -r requirements.txt
+Windows (PowerShell)
 
-If you don’t have a requirements.txt, install manually:
-
-pip install streamlit
-
-⸻
-
-4. Prepare the question bank
-
-Place your question file in the project directory:
-
-questions.json
-
-The expected format is:
-
-[
-  {
-    "id": 1,
-    "question": "...",
-    "options": {
-      "A": "...",
-      "B": "...",
-      "C": "...",
-      "D": "..."
-    },
-    "answer": "A"
-  }
-]
+python -m venv venv
+venv\Scripts\Activate.ps1
 
 ⸻
 
-Running the App
+📥 4. Install dependencies
 
-Start the application:
+python -m pip install streamlit
+
+If requirements.txt exists:
+
+python -m pip install -r requirements.txt
+
+⸻
+
+▶️ 5. Run the app
 
 streamlit run app.py
 
-Streamlit will automatically open the application in your browser.
-
-If it doesn’t, open:
+Then open:
 
 http://localhost:8501
 
 ⸻
 
-Usage
+💾 6. Data storage
 
-📚 Bank Mode
-
-Study all questions sequentially with progress automatically saved.
-
-📝 Exam Mode
-
-Take a random 40-question practice exam.
-
-❌ Wrong Mode
-
-Review questions you’ve answered incorrectly.
-
-🧹 Clear Wrong Questions
-
-Reset your wrong-question collection.
-
-⸻
-
-Data Storage
-
-The application automatically creates a local SQLite database:
+The app automatically creates:
 
 quiz.db
 
 It stores:
 
-* Current study progress
-* Last active mode
-* Wrong questions
+* Progress
+* Exam mode state
+* Wrong answers
 
-You can delete quiz.db at any time to reset all local data.
+To reset all data:
 
-⸻
+macOS / Linux
 
-Technologies
+rm quiz.db
 
-* Python
-* Streamlit
-* SQLite
-* JSON
+Windows
 
-⸻
-
-Contributing
-
-Feel free to fork this repository, open issues, or submit pull requests for improvements.
+del quiz.db
 
 ⸻
 
-License
+⚠️ Important pip rule (all systems)
 
-This project is intended for educational and personal learning purposes.
+If pip doesn’t work, always use:
+
+python -m pip install <package>
